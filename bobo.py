@@ -23,7 +23,7 @@ uploaded_file = st.file_uploader(
 
 @st.cache_data
 def load_data(file):
-    df = pd.read_excel(file)
+    df = pd.read_csv(file)
 
     df['date'] = pd.to_datetime(df['date'], errors='coerce')
 
