@@ -17,8 +17,8 @@ st.title("Sustainable Waste Management Analysis")
 # Upload file
 # -----------------------------
 uploaded_file = st.file_uploader(
-    "Upload sustainable_waste_management_dataset_2024.xlsx",
-    type=["xlsx"]
+    "Upload sustainable_waste_management_dataset_2024.csv",
+    type=["csv"]
 )
 
 @st.cache_data
