@@ -9,110 +9,84 @@ from sklearn.pipeline import Pipeline
 from sklearn.metrics import mean_squared_error, r2_score
 
 # -----------------------------
-# Page Config
-# -----------------------------
-st.set_page_config(
-    page_title="Neo Arcadia Game Analysis",
-    page_icon="🎮",
-    layout="wide"
-)
-
-# -----------------------------
 # Title
 # -----------------------------
-st.title("🎮 Neo Arcadia Game Session Analysis")
-st.markdown("Mini Project #5 — Build a Website with Streamlit")
+st.title("Sustainable Waste Management Analysis")
 
 # -----------------------------
-# Sidebar: Upload File
+# Upload file
 # -----------------------------
-st.sidebar.header("📂 Upload Dataset")
-
-uploaded_file = st.sidebar.file_uploader(
-    "Upload neo_arcadia_missions.csv",
-    type=["csv"]
+uploaded_file = st.file_uploader(
+    "Upload sustainable_waste_management_dataset_2024.xlsx",
+    type=["xlsx"]
 )
 
-# -----------------------------
-# Load Data Function
-# -----------------------------
 @st.cache_data
 def load_data(file):
-    df = pd.read_csv(file)
+    df = pd.read_excel(file)
 
-    df['session_minutes'] = pd.to_numeric(df['session_minutes'], errors='coerce')
-    df['coins_spent'] = pd.to_numeric(df['coins_spent'], errors='coerce')
-    df['start_time'] = pd.to_datetime(df['start_time'], errors='coerce')
-    df['hour'] = df['start_time'].dt.hour
+    df['date'] = pd.to_datetime(df['date'], errors='coerce')
 
-    df = df.dropna(subset=['session_minutes', 'coins_spent', 'win_flag', 'hour'])
+    numeric_cols = [
+        'population', 'waste_kg', 'recyclable_kg', 'organic_kg',
+        'collection_capacity_kg', 'temp_c', 'rain_mm',
+        'is_weekend', 'is_holiday', 'recycling_campaign'
+    ]
+
+    for col in numeric_cols:
+        df[col] = pd.to_numeric(df[col], errors='coerce')
+
+    df = df.dropna()
     return df
 
-# -----------------------------
-# Stop if no file
-# -----------------------------
 if uploaded_file is None:
-    st.warning("⬅️ กรุณาอัปโหลดไฟล์ neo_arcadia_missions.csv ก่อน")
     st.stop()
 
 df = load_data(uploaded_file)
 
 # -----------------------------
-# Sidebar: Model Settings
+# Data Preview
 # -----------------------------
-st.sidebar.header("⚙️ Model Settings")
-
-degree = st.sidebar.slider(
-    "Polynomial Degree",
-    min_value=1,
-    max_value=3,
-    value=2
-)
-
-test_size = st.sidebar.slider(
-    "Test Size",
-    min_value=0.1,
-    max_value=0.4,
-    value=0.2
-)
-
-# -----------------------------
-# Section 1: Data Preview
-# -----------------------------
-st.subheader("📋 Dataset Preview")
+st.header("Dataset Preview")
 st.dataframe(df.head(10))
-st.markdown(f"**Dataset Size:** {df.shape[0]} rows × {df.shape[1]} columns")
+st.write("Rows:", df.shape[0])
+st.write("Columns:", df.shape[1])
 
 # -----------------------------
-# Section 2: Visualization
+# Data Visualization
 # -----------------------------
-st.subheader("📊 Data Visualization")
+st.header("Data Visualization")
 
-col1, col2 = st.columns(2)
+fig1, ax1 = plt.subplots()
+ax1.hist(df['waste_kg'], bins=20)
+ax1.set_xlabel("Waste (kg)")
+ax1.set_ylabel("Frequency")
+ax1.set_title("Waste Distribution")
+st.pyplot(fig1)
 
-with col1:
-    fig1, ax1 = plt.subplots()
-    ax1.scatter(df['coins_spent'], df['session_minutes'], alpha=0.6)
-    ax1.set_xlabel("Coins Spent")
-    ax1.set_ylabel("Session Minutes")
-    ax1.set_title("Coins Spent vs Session Minutes")
-    st.pyplot(fig1)
-
-with col2:
-    fig2, ax2 = plt.subplots()
-    ax2.hist(df['session_minutes'], bins=20)
-    ax2.set_xlabel("Session Minutes")
-    ax2.set_ylabel("Frequency")
-    ax2.set_title("Session Minutes Distribution")
-    st.pyplot(fig2)
+fig2, ax2 = plt.subplots()
+ax2.hist(df['recyclable_kg'], bins=20)
+ax2.set_xlabel("Recyclable Waste (kg)")
+ax2.set_ylabel("Frequency")
+ax2.set_title("Recyclable Waste Distribution")
+st.pyplot(fig2)
 
 # -----------------------------
-# Section 3: Train Model
+# Linear Regression Model
 # -----------------------------
-st.subheader("🤖 Linear Regression Model")
+st.header("Linear Regression Model")
+degree = st.slider("Polynomial Degree", 1)
+test_size = st.slider("Test Size", 0.1)
 
-X = df[['coins_spent', 'win_flag', 'hour']]
-y = df['session_minutes']
+X = df[
+    [
+        'population', 'recyclable_kg', 'organic_kg',
+        'temp_c', 'rain_mm',
+        'is_weekend', 'is_holiday', 'recycling_campaign'
+    ]
+]
+
+y = df['waste_kg']
 
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=test_size, random_state=42
@@ -127,36 +101,23 @@ model.fit(X_train, y_train)
 y_pred = model.predict(X_test)
 
 # -----------------------------
-# Metrics
+# Evaluation
 # -----------------------------
-mse = mean_squared_error(y_test, y_pred)
-r2 = r2_score(y_test, y_pred)
-
-col3, col4 = st.columns(2)
-col3.metric("📉 Mean Squared Error (MSE)", f"{mse:.2f}")
-col4.metric("📈 R-square (R²)", f"{r2:.2f}")
+st.header("Model Evaluation")
+st.write("MSE:", mean_squared_error(y_test, y_pred))
+st.write("R-square:", r2_score(y_test, y_pred))
 
 # -----------------------------
-# Section 4: Prediction vs Actual Plot
+# Prediction vs Actual
 # -----------------------------
-st.subheader("📈 Predicted vs Actual")
-
-fig3, ax3 = plt.subplots(figsize=(8, 5))
-ax3.scatter(y_test, y_pred, alpha=0.7)
+fig3, ax3 = plt.subplots()
+ax3.scatter(y_test, y_pred)
 ax3.plot(
     [y_test.min(), y_test.max()],
     [y_test.min(), y_test.max()],
-    '--', lw=2, label="Perfect Prediction Line"
+    '--'
 )
-ax3.set_xlabel("Actual Session Minutes")
-ax3.set_ylabel("Predicted Session Minutes")
-ax3.legend()
-ax3.grid(True)
-
+ax3.set_xlabel("Actual Waste (kg)")
+ax3.set_ylabel("Predicted Waste (kg)")
+ax3.set_title("Predicted vs Actual Waste")
 st.pyplot(fig3)
-
-# -----------------------------
-# Footer
-# -----------------------------
-st.markdown("---")
-st.markdown("📌 Mini Project #5 | Built with Streamlit")
